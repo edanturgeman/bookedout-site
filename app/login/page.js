@@ -1,85 +1,44 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '../../lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 
-export default function Login() {
+export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
-  const supabase = createClient()
 
-  async function handleLogin(e) {
-    e.preventDefault()
-    setLoading(true)
+  async function handleLogin() {
     setError('')
+    if (!email || !email.includes('@')) { setError('Please enter a valid email address.'); return }
+    if (!password) { setError('Password is required.'); return }
+
+    setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-    } else {
-      router.push('/dashboard')
-    }
+    setLoading(false)
+
+    if (error) { setError(error.message); return }
+    router.push('/dashboard')
   }
 
   return (
-    <main className="min-h-screen bg-[#0F0D0B] flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[#FAF7F2]">Booked<span className="text-[#C9A84C]">Out</span></h1>
-          <p className="text-[#7A746D] mt-1 text-sm">Welcome back</p>
-        </div>
-
-        <div className="bg-[#1C1916] border border-[#2E2925] rounded-2xl p-8">
-          <h2 className="text-[#FAF7F2] text-xl font-semibold mb-6">Log in to your account</h2>
-
-          {error && (
-            <div className="bg-red-900/30 border border-red-700 text-red-300 rounded-xl p-3 mb-4 text-sm">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="text-[#7A746D] text-xs uppercase tracking-wide mb-2 block">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full bg-[#0F0D0B] border border-[#2E2925] rounded-xl px-4 py-3 text-[#FAF7F2] text-sm focus:outline-none focus:border-[#C4856F]"
-                placeholder="you@example.com"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-[#7A746D] text-xs uppercase tracking-wide mb-2 block">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full bg-[#0F0D0B] border border-[#2E2925] rounded-xl px-4 py-3 text-[#FAF7F2] text-sm focus:outline-none focus:border-[#C4856F]"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#C4856F] hover:bg-[#b3745e] text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 mt-2"
-            >
-              {loading ? 'Logging in...' : 'Log In'}
-            </button>
-          </form>
-
-          <p className="text-center text-[#7A746D] text-sm mt-6">
-            Don't have an account?{' '}
-            <Link href="/signup" className="text-[#C9A84C] hover:underline">Sign up free</Link>
-          </p>
-        </div>
-      </div>
-    </main>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'100vh', padding:'24px', background:'#0A0908', fontFamily:'DM Sans, sans-serif' }}>
+      <h1 style={{ color:'#F0EDE8', marginBottom:'8px' }}>Welcome back</h1>
+      <p style={{ color:'#9B9690', marginBottom:'24px' }}>Log in to your BookedOut account</p>
+      {error && <p style={{ color:'#B85555', marginBottom:'16px', fontSize:'13px' }}>{error}</p>}
+      <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}
+        style={{ width:'100%', maxWidth:'360px', padding:'12px', marginBottom:'12px', background:'#181716', border:'1px solid #272523', borderRadius:'6px', color:'#F0EDE8', fontSize:'14px' }}/>
+      <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)}
+        style={{ width:'100%', maxWidth:'360px', padding:'12px', marginBottom:'20px', background:'#181716', border:'1px solid #272523', borderRadius:'6px', color:'#F0EDE8', fontSize:'14px' }}/>
+      <button onClick={handleLogin} disabled={loading}
+        style={{ width:'100%', maxWidth:'360px', height:'46px', background:'#C9A84C', color:'#0A0908', border:'none', borderRadius:'6px', fontSize:'14px', fontWeight:'600', cursor:'pointer' }}>
+        {loading ? 'Logging in…' : 'Log In →'}
+      </button>
+      <p style={{ marginTop:'20px', fontSize:'13px', color:'#5C5955' }}>
+        Don't have an account? <a href="/signup" style={{ color:'#C9A84C' }}>Start your free trial →</a>
+      </p>
+    </div>
   )
 }
