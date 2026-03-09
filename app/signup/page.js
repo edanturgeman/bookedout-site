@@ -11,11 +11,21 @@ const rules = [
   { id:'spaces',  label:'No spaces',                  test: v => !/\s/.test(v) && v.length > 0 },
 ]
 
+function isAtLeast18(dateStr) {
+  if (!dateStr) return false
+  const today = new Date()
+  const dob = new Date(dateStr)
+  const age18 = new Date(dob.getFullYear() + 18, dob.getMonth(), dob.getDate())
+  return today >= age18
+}
+
 export default function SignupPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ firstName:'', lastName:'', businessName:'', specialty:'', email:'', password:'', plan:'solo' })
+  const [form, setForm] = useState({ firstName:'', lastName:'', businessName:'', specialty:'', email:'', password:'', plan:'solo', birthdate:'', promoCode:'' })
   const [tosChecked, setTosChecked] = useState(true)
   const [showPwRules, setShowPwRules] = useState(false)
+  const [promoStatus, setPromoStatus] = useState(null) // null | 'valid' | 'invalid'
+  const [promoMessage, setPromoMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -24,15 +34,38 @@ export default function SignupPage() {
   const emailValid = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())
   const pwValid = v => rules.every(r => r.test(v))
 
+  // Max date for birthdate input = 18 years ago from today
+  const maxBirthdate = (() => {
+    const d = new Date()
+    d.setFullYear(d.getFullYear() - 18)
+    return d.toISOString().split('T')[0]
+  })()
+
+  function handlePromoCheck(code) {
+    set('promoCode', code)
+    if (!code.trim()) { setPromoStatus(null); setPromoMessage(''); return }
+    // Placeholder validation — replace with real Supabase lookup when ready
+    const validCodes = ['BOOKEDOUT5', 'WELCOME5', 'REFERRAL5']
+    if (validCodes.includes(code.trim().toUpperCase())) {
+      setPromoStatus('valid')
+      setPromoMessage('✓ Promo code applied — $5 credit will be added to your account!')
+    } else {
+      setPromoStatus('invalid')
+      setPromoMessage('✕ Invalid promo code. Please check and try again.')
+    }
+  }
+
   async function handleSignup() {
     setError('')
-    if (!form.firstName.trim())    { setError('First name is required.'); return }
-    if (!form.lastName.trim())     { setError('Last name is required.'); return }
-    if (!form.businessName.trim()) { setError('Business name is required.'); return }
-    if (!form.specialty)           { setError('Please select your specialty.'); return }
-    if (!emailValid(form.email))   { setError('Please enter a valid email address.'); return }
-    if (!pwValid(form.password))   { setError("Password doesn't meet all requirements."); setShowPwRules(true); return }
-    if (!tosChecked)               { setError('You must agree to the Terms of Service.'); return }
+    if (!form.firstName.trim())        { setError('First name is required.'); return }
+    if (!form.lastName.trim())         { setError('Last name is required.'); return }
+    if (!form.businessName.trim())     { setError('Business name is required.'); return }
+    if (!form.specialty)               { setError('Please select your specialty.'); return }
+    if (!form.birthdate)               { setError('Date of birth is required.'); return }
+    if (!isAtLeast18(form.birthdate))  { setError('You must be at least 18 years old to sign up.'); return }
+    if (!emailValid(form.email))       { setError('Please enter a valid email address.'); return }
+    if (!pwValid(form.password))       { setError("Password doesn't meet all requirements."); setShowPwRules(true); return }
+    if (!tosChecked)                   { setError('You must agree to the Terms of Service.'); return }
 
     setLoading(true)
     const { error: signUpError } = await supabase.auth.signUp({
@@ -45,6 +78,8 @@ export default function SignupPage() {
           business_name: form.businessName,
           specialty: form.specialty,
           plan: form.plan,
+          birthdate: form.birthdate,
+          promo_code: form.promoCode.trim().toUpperCase() || null,
         }
       }
     })
@@ -89,6 +124,8 @@ export default function SignupPage() {
         .field-input::placeholder { color:#5C5955; }
         .field-input:focus { border-color:#C9A84C; background:#1F1E1C; box-shadow:0 0 0 3px rgba(201,168,76,0.1); }
         .field-input.error { border-color:#B85555; }
+        input[type="date"].field-input { color-scheme:dark; }
+        input[type="date"].field-input::-webkit-calendar-picker-indicator { filter:invert(0.4); cursor:pointer; }
         select.field-input { cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235C5955' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding-right:36px; }
         select.field-input option { background:#181716; color:#F0EDE8; }
         .pw-wrap { position:relative; }
@@ -104,6 +141,14 @@ export default function SignupPage() {
         .plan-card.selected { border-color:rgba(201,168,76,0.5); background:rgba(201,168,76,0.08); }
         .plan-name { font-size:13px; font-weight:600; color:#F0EDE8; margin-bottom:2px; }
         .plan-price { font-size:12px; color:#C9A84C; }
+        .promo-input { width:100%; height:44px; padding:0 14px; background:#181716; border:1px solid #272523; border-radius:6px; font-size:14px; color:#F0EDE8; font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.15s, box-shadow 0.15s; letter-spacing:0.06em; text-transform:uppercase; }
+        .promo-input::placeholder { text-transform:none; letter-spacing:normal; color:#5C5955; }
+        .promo-input:focus { border-color:#C9A84C; background:#1F1E1C; box-shadow:0 0 0 3px rgba(201,168,76,0.1); }
+        .promo-input.valid { border-color:rgba(78,155,111,0.6); }
+        .promo-input.invalid { border-color:rgba(184,85,85,0.6); }
+        .promo-msg { font-size:12px; margin-top:8px; line-height:1.5; }
+        .promo-msg.valid { color:#4E9B6F; }
+        .promo-msg.invalid { color:#B85555; }
         .tos-row { display:flex; gap:12px; padding:14px; border:1px solid #272523; border-radius:6px; margin-bottom:16px; cursor:pointer; background:#181716; transition:all 0.15s; }
         .tos-row.checked { border-color:rgba(201,168,76,0.3); background:rgba(201,168,76,0.05); }
         .tos-check { width:18px; height:18px; border-radius:4px; border:1px solid #312F2D; background:#1F1E1C; display:flex; align-items:center; justify-content:center; font-size:10px; color:#0A0908; flex-shrink:0; margin-top:1px; transition:all 0.15s; }
@@ -188,6 +233,18 @@ export default function SignupPage() {
                   </div>
                 </div>
 
+                <div className="field" style={{marginTop:'14px'}}>
+                  <label className="field-label">Date of birth<span className="req">*</span></label>
+                  <input
+                    className="field-input"
+                    type="date"
+                    max={maxBirthdate}
+                    value={form.birthdate}
+                    onChange={e => set('birthdate', e.target.value)}
+                  />
+                  <p style={{fontSize:'11px', color:'#5C5955', marginTop:'6px'}}>You must be at least 18 years old to use BookedOut.</p>
+                </div>
+
                 <div className="section-label">Business Info</div>
                 <div className="field">
                   <label className="field-label">Business / shop name<span className="req">*</span></label>
@@ -257,6 +314,21 @@ export default function SignupPage() {
                 <p style={{fontSize:'11px',color:'#5C5955',marginBottom:'20px',lineHeight:'1.55'}}>
                   Both plans include a <span style={{color:'#C9A84C'}}>30-day free trial</span>. You won't be charged until your trial ends.
                 </p>
+
+                <div className="section-label">Promo Code</div>
+                <div className="field">
+                  <label className="field-label">Have a promo or referral code? <span style={{color:'#5C5955',fontWeight:400}}>(Optional)</span></label>
+                  <input
+                    className={`promo-input${promoStatus === 'valid' ? ' valid' : promoStatus === 'invalid' ? ' invalid' : ''}`}
+                    type="text"
+                    placeholder="Enter code (e.g. REFERRAL5)"
+                    value={form.promoCode}
+                    onChange={e => handlePromoCheck(e.target.value)}
+                  />
+                  {promoStatus && (
+                    <p className={`promo-msg ${promoStatus}`}>{promoMessage}</p>
+                  )}
+                </div>
 
                 <div className={`tos-row${tosChecked ? ' checked' : ''}`} onClick={() => setTosChecked(t => !t)}>
                   <div className={`tos-check${tosChecked ? ' checked' : ''}`}>{tosChecked ? '✓' : ''}</div>
