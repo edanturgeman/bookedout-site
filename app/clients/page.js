@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 
 const supabase = createClient()
 
@@ -247,6 +247,7 @@ export default function ClientsPage() {
   const [loading, setLoading]     = useState(true)
   const [collapsed, setCollapsed] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [clients, setClients]     = useState(SAMPLE_CLIENTS)
   const [search, setSearch]       = useState('')
@@ -277,6 +278,15 @@ export default function ClientsPage() {
     }
     getUser()
   }, [])
+
+  // Auto-open new client modal if ?new=true in URL
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setNewModal(true)
+      // Clean the URL so refreshing doesn't reopen it
+      router.replace('/clients')
+    }
+  }, [searchParams])
 
   const showToast = (msg, color = '#4E9B6F') => {
     setToast({ msg, color })

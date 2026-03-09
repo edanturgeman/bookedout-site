@@ -51,10 +51,10 @@ const stats = [
 ]
 
 const quickActions = [
-  { label:'New Appointment', icon:'plus',     color:'#C9A84C', bg:'rgba(201,168,76,0.08)',  border:'rgba(201,168,76,0.25)' },
-  { label:'Add Client',      icon:'users',    color:'#4E9B6F', bg:'rgba(78,155,111,0.08)',  border:'rgba(78,155,111,0.25)' },
-  { label:'Calendar',        icon:'calendar', color:'#B87460', bg:'rgba(184,116,96,0.08)',  border:'rgba(184,116,96,0.25)' },
-  { label:'Send Reminder',   icon:'bell',     color:'#9B9690', bg:'rgba(155,150,144,0.08)', border:'rgba(155,150,144,0.2)' },
+  { label:'New Appointment', icon:'plus',     color:'#C9A84C', bg:'rgba(201,168,76,0.08)',  border:'rgba(201,168,76,0.25)',  href:'/calendar?new=true' },
+  { label:'Add Client',      icon:'users',    color:'#4E9B6F', bg:'rgba(78,155,111,0.08)',  border:'rgba(78,155,111,0.25)',  href:'/clients?new=true' },
+  { label:'Calendar',        icon:'calendar', color:'#B87460', bg:'rgba(184,116,96,0.08)',  border:'rgba(184,116,96,0.25)',  href:'/calendar' },
+  { label:'Send Reminder',   icon:'bell',     color:'#9B9690', bg:'rgba(155,150,144,0.08)', border:'rgba(155,150,144,0.2)',  href:'/reminders' },
 ]
 
 const navItems = [
@@ -407,7 +407,7 @@ export default function Dashboard() {
 
           {/* Availability shortcut */}
           <div style={{padding:'8px', borderTop:'1px solid var(--border)'}}>
-            <a href='/settings/availability'
+            <a href='/settings?tab=availability'
               style={{display:'flex', alignItems:'center', gap:'10px', padding:'8px 12px', borderRadius:'8px', textDecoration:'none', color:'var(--text-3)', fontSize:'12px', fontWeight:500, transition:'all 0.15s', background:'transparent'}}
               onMouseOver={e => { e.currentTarget.style.background='var(--surface-2)'; e.currentTarget.style.color='var(--gold)' }}
               onMouseOut={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--text-3)' }}>
@@ -442,10 +442,10 @@ export default function Dashboard() {
               <div className="topbar-date">{dateStr}</div>
             </div>
             <div className="topbar-right">
-              <button className="topbar-btn" title="Notifications">
+              <button className="topbar-btn" title="Notifications" onClick={() => router.push('/reminders')}>
                 <Icon name="bell" size={15}/>
               </button>
-              <button className="topbar-btn" title="Settings">
+              <button className="topbar-btn" title="Settings" onClick={() => router.push('/settings')}>
                 <Icon name="settings" size={15}/>
               </button>
               <button className="logout-btn" onClick={handleLogout}>
@@ -486,7 +486,7 @@ export default function Dashboard() {
                 <div className="panel">
                   <div className="panel-header">
                     <div className="panel-title">Today's Schedule</div>
-                    <button className="panel-action">View full calendar →</button>
+                    <button className="panel-action" onClick={() => router.push('/calendar')}>View full calendar →</button>
                   </div>
                   <div className="panel-body">
                     {todayAppointments.length === 0 ? (
@@ -521,7 +521,8 @@ export default function Dashboard() {
                 <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'10px'}}>
                   {quickActions.map(a => (
                     <button key={a.label} className="quick-btn"
-                      style={{background: a.bg, borderColor: a.border, color: a.color}}>
+                      style={{background: a.bg, borderColor: a.border, color: a.color}}
+                      onClick={() => router.push(a.href)}>
                       <Icon name={a.icon} size={18} color={a.color}/>
                       <span className="quick-label">{a.label}</span>
                     </button>
@@ -556,7 +557,7 @@ export default function Dashboard() {
                 <div className="panel">
                   <div className="panel-header">
                     <div className="panel-title">My Hours Today</div>
-                    <a href="/settings/availability" className="panel-action">Edit →</a>
+                    <button className="panel-action" onClick={() => router.push('/settings?tab=availability')}>Edit →</button>
                   </div>
                   <div style={{padding:'14px 16px', display:'flex', flexDirection:'column', gap:'8px'}}>
                     {[
@@ -582,7 +583,7 @@ export default function Dashboard() {
                 <div className="panel">
                   <div className="panel-header">
                     <div className="panel-title">Upcoming Clients</div>
-                    <button className="panel-action">See all →</button>
+                    <button className="panel-action" onClick={() => router.push('/clients')}>See all →</button>
                   </div>
                   <div className="panel-body">
                     {todayAppointments.slice(0,4).map((appt, i) => {

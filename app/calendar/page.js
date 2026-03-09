@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -40,21 +40,33 @@ const Icon = ({ name, size = 16, color = 'currentColor' }) => {
 
 // ── SERVICE COLOR MAP ──
 const serviceColors = {
-  'Fade':           '#C9A84C',
-  'Fade + Line-up': '#C9A84C',
-  'Beard Trim':     '#C9A84C',
-  'Line-up':        '#C9A84C',
-  'Color':          '#4E9B6F',
-  'Color Treatment':'#4E9B6F',
-  'Highlights':     '#4E9B6F',
-  'Blowout':        '#4E9B6F',
-  'Full Set':       '#B87460',
-  'Fill':           '#B87460',
-  'Pedicure':       '#B87460',
-  'Facial':         '#9B7EC8',
-  'Wax':            '#9B7EC8',
-  'Lash Set':       '#7EB8C9',
-  'default':        '#C9A84C',
+  'Fade':            '#B8860B',  // dark gold
+  'Fade + Line-up':  '#B8860B',
+  'Beard Trim':      '#C1440E',  // burnt orange
+  'Line-up':         '#C1440E',
+  'Color':           '#2E8B57',  // forest green
+  'Color Treatment': '#2E8B57',
+  'Highlights':      '#2E8B57',
+  'Blowout':         '#1E7A9C',  // ocean blue
+  'Full Set':        '#A0522D',  // sienna
+  'Fill':            '#A0522D',
+  'Pedicure':        '#9B2D7A',  // magenta
+  'Facial':          '#6A3FA0',  // deep purple
+  'Wax':             '#6A3FA0',
+  'Lash Set':        '#1E7A9C',  // ocean blue
+  'Kids':            '#3A7D3A',  // medium green
+  'default':         '#B8860B',
+}
+
+// Color per day of week for the day column header accent
+const dayColors = {
+  0: '#5C5955', // Sun — muted
+  1: '#C9A84C', // Mon — gold
+  2: '#4E9B6F', // Tue — green
+  3: '#B87460', // Wed — rose
+  4: '#7EB8C9', // Thu — teal
+  5: '#9B7EC8', // Fri — purple
+  6: '#D4916A', // Sat — orange
 }
 
 const getColor = (service = '') => {
@@ -158,20 +170,23 @@ const css = `
   .fc-theme-standard td, .fc-theme-standard th { border-color: var(--border) !important; }
   .fc-theme-standard .fc-scrollgrid { border-color: var(--border) !important; }
   .fc-col-header { background: var(--surface) !important; }
-  .fc-col-header-cell { padding: 10px 0 !important; }
+  .fc-col-header-cell { padding: 10px 0 !important; border-bottom: 2px solid var(--border) !important; }
   .fc-col-header-cell-cushion { font-size: 11px !important; font-weight: 600 !important; letter-spacing: 0.06em !important; text-transform: uppercase !important; color: var(--text-3) !important; text-decoration: none !important; }
+  .fc-col-header-cell.fc-day-today { background: rgba(201,168,76,0.06) !important; border-bottom: 2px solid var(--gold) !important; }
   .fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion { color: var(--gold) !important; }
-  .fc-timegrid-slot { height: 48px !important; background: var(--bg) !important; }
+  .fc-timegrid-slot { height: 48px !important; }
+  .fc-timegrid-slot:nth-child(odd) { background: rgba(255,255,255,0.008) !important; }
   .fc-timegrid-slot-label { font-size: 10px !important; color: var(--text-3) !important; font-weight: 500 !important; padding-right: 10px !important; }
   .fc-timegrid-slot-lane { border-color: var(--border) !important; }
-  .fc-timegrid-slot-minor { border-color: rgba(39,37,35,0.4) !important; }
-  .fc-day-today { background: rgba(201,168,76,0.03) !important; }
-  .fc-timegrid-now-indicator-line { border-color: var(--gold) !important; border-width: 1.5px !important; }
+  .fc-timegrid-slot-minor { border-color: rgba(39,37,35,0.4) !important; border-style: dashed !important; }
+  .fc-day-today { background: rgba(201,168,76,0.04) !important; box-shadow: inset 1px 0 0 rgba(201,168,76,0.15), inset -1px 0 0 rgba(201,168,76,0.15) !important; }
+  .fc-timegrid-now-indicator-line { border-color: var(--gold) !important; border-width: 2px !important; }
   .fc-timegrid-now-indicator-arrow { border-top-color: var(--gold) !important; border-bottom-color: var(--gold) !important; }
-  .fc-event { border: none !important; border-radius: 6px !important; cursor: pointer !important; }
-  .fc-event:hover { filter: brightness(1.1) !important; }
-  .fc-event-main { padding: 5px 8px !important; }
+  .fc-event { border: none !important; border-radius: 6px !important; cursor: pointer !important; background: transparent !important; }
+  .fc-event:hover { filter: brightness(1.15) saturate(1.1) !important; transform: scale(1.01) !important; transition: all 0.1s !important; }
+  .fc-event-main { padding: 0 !important; height: 100% !important; }
   .fc-daygrid-event { border-radius: 4px !important; }
+  .fc-daygrid-event .fc-event-main { padding: 2px 6px !important; }
   .fc-scrollgrid-sync-inner { background: var(--surface) !important; }
   .fc-timegrid-axis { background: var(--surface) !important; }
   .fc-scroller { background: var(--bg) !important; }
@@ -243,41 +258,77 @@ const css = `
   .color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 
   /* LEGEND */
-  .cal-legend { display:flex; align-items:center; gap:16px; padding:0 20px 12px; }
-  .legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-3); }
-  .legend-dot { width:8px; height:8px; border-radius:50%; }
+  .cal-legend { display:flex; align-items:center; gap:6px; padding:8px 20px; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:5px; font-size:10px; font-weight:500; color:var(--text-3); padding:3px 8px; border-radius:99px; border:1px solid var(--border); background:var(--surface-2); letter-spacing:0.02em; }
+  .legend-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 `
 
 // ── EVENT CONTENT RENDERER ──
 function renderEvent(info) {
   const { event } = info
   const color = getColor(event.extendedProps.service)
-  const start = event.start ? event.start.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true }) : ''
+  const start = event.start
+    ? event.start.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true })
+    : ''
+  const durationMins = event.start && event.end
+    ? Math.round((event.end - event.start) / 60000)
+    : null
+  const isShort = durationMins && durationMins <= 30
+
   return (
     <div style={{
-      background: `${color}18`,
-      border: `1px solid ${color}40`,
-      borderLeft: `3px solid ${color}`,
+      background: color,
+      borderLeft: `4px solid rgba(0,0,0,0.25)`,
       borderRadius: '5px',
-      padding: '4px 7px',
+      padding: isShort ? '3px 7px' : '5px 8px',
       height: '100%',
       overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '1px',
     }}>
-      <div style={{ fontSize:'11px', fontWeight:700, color, marginBottom:'1px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+      {/* Client name */}
+      <div style={{
+        fontSize: isShort ? '10px' : '11px',
+        fontWeight: 700,
+        color: '#fff',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        lineHeight: '1.3',
+        textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+      }}>
         {event.title}
       </div>
-      <div style={{ fontSize:'10px', color:'rgba(240,237,232,0.7)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-        {event.extendedProps.service}
-      </div>
-      <div style={{ fontSize:'10px', color:'rgba(155,150,144,0.8)', marginTop:'1px' }}>
-        {start} · {event.extendedProps.duration}
+      {/* Service */}
+      {!isShort && (
+        <div style={{
+          fontSize: '10px',
+          color: 'rgba(255,255,255,0.85)',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          lineHeight: '1.3',
+        }}>
+          {event.extendedProps.service}
+        </div>
+      )}
+      {/* Time */}
+      <div style={{
+        fontSize: '9px',
+        color: 'rgba(255,255,255,0.7)',
+        marginTop: 'auto',
+        whiteSpace: 'nowrap',
+      }}>
+        {start}{durationMins ? ` · ${durationMins}m` : ''}
       </div>
     </div>
   )
 }
-
 // ── MAIN COMPONENT ──
 export default function CalendarPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser]           = useState(null)
   const [loading, setLoading]     = useState(true)
   const [collapsed, setCollapsed] = useState(false)
@@ -294,8 +345,6 @@ export default function CalendarPage() {
   const [form, setForm] = useState({ clientName:'', service:'', date:'', startTime:'', duration:'60', notes:'' })
 
   const calRef = useRef(null)
-  const router = useRouter()
-
   useEffect(() => {
     async function getUser() {
       const { data:{ user } } = await supabase.auth.getUser()
@@ -305,6 +354,14 @@ export default function CalendarPage() {
     }
     getUser()
   }, [])
+
+  // Auto-open new appointment modal if ?new=true in URL
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setNewModal(true)
+      router.replace('/calendar')
+    }
+  }, [searchParams])
 
   // Update week label when calendar navigates
   const updateLabel = () => {
@@ -449,8 +506,16 @@ export default function CalendarPage() {
           </header>
 
           {/* Legend */}
-          <div className="cal-legend" style={{background:'var(--surface)', borderBottom:'1px solid var(--border)', paddingTop:'10px'}}>
-            {[['#C9A84C','Hair / Barber'],['#4E9B6F','Color / Styling'],['#B87460','Nails / Skin'],['#9B7EC8','Esthetics'],['#7EB8C9','Lash / Brow']].map(([color, label]) => (
+          <div className="cal-legend" style={{background:'var(--surface)', borderBottom:'1px solid var(--border)'}}>
+            {[
+              ['#B8860B', 'Fade / Cut'],
+              ['#C1440E', 'Beard / Trim'],
+              ['#2E8B57', 'Color / Styling'],
+              ['#1E7A9C', 'Blowout / Lash'],
+              ['#A0522D', 'Nails / Sets'],
+              ['#9B2D7A', 'Pedicure'],
+              ['#6A3FA0', 'Esthetics / Wax'],
+            ].map(([color, label]) => (
               <div className="legend-item" key={label}>
                 <div className="legend-dot" style={{background:color}}/>
                 {label}

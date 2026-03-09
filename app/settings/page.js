@@ -368,6 +368,30 @@ export default function SettingsPage() {
   // ── Billing state ───────────────────────────────────────────
   const [showCancel, setShowCancel] = useState(false)
 
+  // ── Booking Page state ───────────────────────────────────────
+  const [bookingPage, setBookingPage] = useState({
+    username:      '',
+    tagline:       '',
+    coverStyle:    'gradient-gold',   // gradient-gold | gradient-rose | gradient-green | solid-dark
+    instagram:     '',
+    tiktok:        '',
+    facebook:      '',
+    avatarUrl:     null,
+    businessPhone: '',
+    businessEmail: '',
+    address:       '',
+  })
+  const setBP = (k, v) => setBookingPage(b => ({ ...b, [k]: v }))
+  const [usernameStatus, setUsernameStatus] = useState(null) // 'ok' | 'bad' | null
+  const [avatarPreview, setAvatarPreview]   = useState(null)
+
+  // Username validation
+  useEffect(() => {
+    if (!bookingPage.username) { setUsernameStatus(null); return }
+    const valid = /^[a-z0-9_]{3,30}$/.test(bookingPage.username)
+    setUsernameStatus(valid ? 'ok' : 'bad')
+  }, [bookingPage.username])
+
   // ── Auth ────────────────────────────────────────────────────
   useEffect(() => {
     async function getUser() {
@@ -521,6 +545,7 @@ export default function SettingsPage() {
             {[
               ['availability', 'My Availability'],
               ['profile',      'Profile'],
+              ['booking-page', 'Booking Page'],
               ['services',     'Services'],
               ['notifications','Notifications'],
               ['billing',      'Billing'],
@@ -751,6 +776,190 @@ export default function SettingsPage() {
                   <button className={`save-btn${saved ? ' saved' : ''}`} onClick={handleSave}>
                     <Icon name={saved ? 'check' : 'save'} size={14} color="#0A0908"/>
                     {saved ? 'Saved!' : 'Save Profile'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ════════════════ BOOKING PAGE ════════════════ */}
+            {activeTab === 'booking-page' && (
+              <>
+                {/* Live link banner */}
+                <div className="card-section" style={{background:'var(--gold-bg)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:'10px', padding:'16px 20px', marginBottom:'0'}}>
+                  <div style={{fontSize:'11px', fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--gold)', marginBottom:'8px'}}>Your Public Booking Link</div>
+                  <div style={{display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap'}}>
+                    <div style={{flex:1, fontSize:'14px', color:'var(--text)', fontWeight:500, minWidth:'200px'}}>
+                      imbookedout.com/book/{bookingPage.username || <span style={{color:'var(--text-3)'}}>yourname</span>}
+                    </div>
+                    <div style={{display:'flex', gap:'8px'}}>
+                      <button className="btn-secondary" style={{height:'34px', padding:'0 14px', fontSize:'12px'}}
+                        onClick={() => navigator.clipboard?.writeText(`https://imbookedout.com/book/${bookingPage.username}`)}>
+                        Copy Link
+                      </button>
+                      <button className="btn-secondary" style={{height:'34px', padding:'0 14px', fontSize:'12px'}}
+                        onClick={() => window.open(`/book/${bookingPage.username}`, '_blank')}>
+                        Preview →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Username */}
+                <div className="card-section">
+                  <div className="card-section-title">Booking URL</div>
+                  <div className="field">
+                    <label className="field-label">Your username</label>
+                    <div style={{position:'relative', display:'flex', alignItems:'center'}}>
+                      <span style={{position:'absolute', left:'14px', fontSize:'13px', color:'var(--text-3)', pointerEvents:'none', whiteSpace:'nowrap'}}>
+                        imbookedout.com/book/
+                      </span>
+                      <input
+                        className="field-input"
+                        style={{paddingLeft:'172px', paddingRight:'90px'}}
+                        type="text"
+                        placeholder="yourname"
+                        value={bookingPage.username}
+                        onChange={e => setBP('username', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,''))}
+                      />
+                      {usernameStatus && (
+                        <span style={{position:'absolute', right:'14px', fontSize:'11px', fontWeight:600, color: usernameStatus === 'ok' ? 'var(--green)' : 'var(--red)'}}>
+                          {usernameStatus === 'ok' ? '✓ Available' : '✕ Invalid'}
+                        </span>
+                      )}
+                    </div>
+                    <p className="field-hint">Lowercase letters, numbers, and underscores only. 3–30 characters.</p>
+                  </div>
+                </div>
+
+                {/* Profile photo */}
+                <div className="card-section">
+                  <div className="card-section-title">Profile Photo</div>
+                  <div style={{display:'flex', alignItems:'center', gap:'20px'}}>
+                    <div style={{width:'72px', height:'72px', borderRadius:'50%', background:'var(--gold-bg)', border:'2px solid rgba(201,168,76,0.3)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', flexShrink:0}}>
+                      {avatarPreview
+                        ? <img src={avatarPreview} style={{width:'100%',height:'100%',objectFit:'cover'}} alt="Avatar"/>
+                        : <span style={{fontFamily:'var(--font-display)', fontSize:'26px', color:'var(--gold)'}}>
+                            {(profile.firstName?.[0] || '?')}
+                          </span>
+                      }
+                    </div>
+                    <div>
+                      <label style={{display:'inline-flex', alignItems:'center', height:'36px', padding:'0 16px', background:'var(--surface-2)', border:'1px solid var(--border-2)', borderRadius:'8px', fontSize:'13px', color:'var(--text-2)', cursor:'pointer', fontFamily:'var(--font-body)', transition:'all 0.15s'}}>
+                        Upload Photo
+                        <input type="file" accept="image/*" style={{display:'none'}} onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            const reader = new FileReader()
+                            reader.onload = ev => setAvatarPreview(ev.target.result)
+                            reader.readAsDataURL(file)
+                            // TODO: upload to Supabase storage
+                          }
+                        }}/>
+                      </label>
+                      <p className="field-hint" style={{marginTop:'6px'}}>JPG or PNG. Recommended 400×400px or larger.</p>
+                      {avatarPreview && (
+                        <button className="btn-secondary" style={{marginTop:'8px', height:'30px', padding:'0 12px', fontSize:'11px'}}
+                          onClick={() => setAvatarPreview(null)}>
+                          Remove photo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tagline */}
+                <div className="card-section">
+                  <div className="card-section-title">Tagline</div>
+                  <div className="field">
+                    <label className="field-label">Short tagline <span className="field-label-opt">(shown below your name on the booking page)</span></label>
+                    <input className="field-input" type="text"
+                      placeholder="e.g. Precision fades & clean cuts. Walk-ins welcome."
+                      value={bookingPage.tagline}
+                      onChange={e => setBP('tagline', e.target.value)}
+                      maxLength={100}
+                    />
+                    <p className="field-hint">{bookingPage.tagline.length}/100 characters</p>
+                  </div>
+                </div>
+
+                {/* Cover style */}
+                <div className="card-section">
+                  <div className="card-section-title">Cover Style</div>
+                  <p className="field-hint" style={{marginBottom:'14px'}}>Choose the accent color shown at the top of your booking page.</p>
+                  <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'10px'}}>
+                    {[
+                      { key:'gradient-gold',  label:'Gold',      bg:'linear-gradient(135deg,#C9A84C,#8B6914)' },
+                      { key:'gradient-rose',  label:'Rose',      bg:'linear-gradient(135deg,#C47B6A,#8B3A28)' },
+                      { key:'gradient-green', label:'Sage',      bg:'linear-gradient(135deg,#4E9B6F,#2A6B44)' },
+                      { key:'solid-dark',     label:'Charcoal',  bg:'linear-gradient(135deg,#3A3530,#1A1714)' },
+                    ].map(opt => (
+                      <div key={opt.key}
+                        onClick={() => setBP('coverStyle', opt.key)}
+                        style={{
+                          borderRadius:'10px', overflow:'hidden', cursor:'pointer',
+                          border: bookingPage.coverStyle === opt.key ? '2px solid var(--gold)' : '2px solid var(--border)',
+                          transition:'border-color 0.15s',
+                        }}>
+                        <div style={{height:'48px', background:opt.bg}}/>
+                        <div style={{padding:'8px', fontSize:'11px', fontWeight:500, color: bookingPage.coverStyle === opt.key ? 'var(--gold)' : 'var(--text-3)', textAlign:'center', background:'var(--surface-2)'}}>
+                          {bookingPage.coverStyle === opt.key ? '✓ ' : ''}{opt.label}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Contact info */}
+                <div className="card-section">
+                  <div className="card-section-title">Contact Info <span className="field-label-opt" style={{fontSize:'12px', fontWeight:400, textTransform:'none', letterSpacing:'normal'}}>(shown to clients on your booking page)</span></div>
+                  <div className="field">
+                    <label className="field-label">Business phone</label>
+                    <input className="field-input" type="tel" placeholder="+1 (555) 000-0000"
+                      value={bookingPage.businessPhone}
+                      onChange={e => setBP('businessPhone', e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Business email</label>
+                    <input className="field-input" type="email" placeholder="you@example.com"
+                      value={bookingPage.businessEmail}
+                      onChange={e => setBP('businessEmail', e.target.value)}
+                    />
+                    <p className="field-hint">Can be different from your account email. Clients will use this to reach you.</p>
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Address <span className="field-label-opt">(optional)</span></label>
+                    <input className="field-input" type="text" placeholder="123 Main St, Miami, FL 33101"
+                      value={bookingPage.address}
+                      onChange={e => setBP('address', e.target.value)}
+                    />
+                    <p className="field-hint">Leave blank if you're mobile or work from multiple locations.</p>
+                  </div>
+                </div>
+
+                {/* Social links */}
+                <div className="card-section">
+                  <div className="card-section-title">Social Links <span className="field-label-opt" style={{fontSize:'12px', fontWeight:400, textTransform:'none', letterSpacing:'normal'}}>(optional)</span></div>
+                  <p className="field-hint" style={{marginBottom:'14px'}}>Add your social profiles so clients can find and follow you.</p>
+                  {[
+                    { key:'instagram', label:'Instagram', placeholder:'instagram.com/yourhandle' },
+                    { key:'tiktok',    label:'TikTok',    placeholder:'tiktok.com/@yourhandle'   },
+                    { key:'facebook',  label:'Facebook',  placeholder:'facebook.com/yourpage'    },
+                  ].map(s => (
+                    <div key={s.key} className="field">
+                      <label className="field-label">{s.label}</label>
+                      <input className="field-input" type="url" placeholder={s.placeholder}
+                        value={bookingPage[s.key]}
+                        onChange={e => setBP(s.key, e.target.value)}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="save-row">
+                  <button className={`save-btn${saved ? ' saved' : ''}`} onClick={handleSave}>
+                    <Icon name={saved ? 'check' : 'save'} size={14} color="#0A0908"/>
+                    {saved ? 'Saved!' : 'Save Booking Page'}
                   </button>
                 </div>
               </>
