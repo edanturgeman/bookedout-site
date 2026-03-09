@@ -24,7 +24,7 @@ export default function SignupPage() {
   const [form, setForm] = useState({ firstName:'', lastName:'', businessName:'', specialty:'', email:'', password:'', plan:'solo', birthdate:'', promoCode:'' })
   const [tosChecked, setTosChecked] = useState(true)
   const [showPwRules, setShowPwRules] = useState(false)
-  const [promoStatus, setPromoStatus] = useState(null) // null | 'valid' | 'invalid'
+  const [promoStatus, setPromoStatus] = useState(null)
   const [promoMessage, setPromoMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -34,7 +34,6 @@ export default function SignupPage() {
   const emailValid = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())
   const pwValid = v => rules.every(r => r.test(v))
 
-  // Max date for birthdate input = 18 years ago from today
   const maxBirthdate = (() => {
     const d = new Date()
     d.setFullYear(d.getFullYear() - 18)
@@ -44,7 +43,6 @@ export default function SignupPage() {
   function handlePromoCheck(code) {
     set('promoCode', code)
     if (!code.trim()) { setPromoStatus(null); setPromoMessage(''); return }
-    // Placeholder validation — replace with real Supabase lookup when ready
     const validCodes = ['BOOKEDOUT5', 'WELCOME5', 'REFERRAL5']
     if (validCodes.includes(code.trim().toUpperCase())) {
       setPromoStatus('valid')
@@ -72,6 +70,8 @@ export default function SignupPage() {
       email: form.email,
       password: form.password,
       options: {
+        // After clicking the confirmation email, user lands on /onboarding already logged in
+        emailRedirectTo: `${window.location.origin}/onboarding`,
         data: {
           first_name: form.firstName,
           last_name: form.lastName,
@@ -85,8 +85,9 @@ export default function SignupPage() {
     })
     setLoading(false)
     if (signUpError) { setError(signUpError.message); return }
+
+    // Show the "check your email" screen — no redirect until they confirm
     setSuccess(true)
-    setTimeout(() => router.push('/dashboard'), 2200)
   }
 
   return (
@@ -167,11 +168,25 @@ export default function SignupPage() {
         .form-footer a:hover { text-decoration:underline; }
         .back-link { position:fixed; top:24px; left:28px; z-index:10; display:flex; align-items:center; gap:6px; font-size:13px; color:#5C5955; text-decoration:none; transition:color 0.12s; }
         .back-link:hover { color:#F0EDE8; }
+
+        /* ── Email confirmation screen ── */
         .success-wrap { text-align:center; padding:32px 0; }
-        .success-icon { width:60px; height:60px; border-radius:50%; background:rgba(78,155,111,0.10); border:1px solid rgba(78,155,111,0.3); display:flex; align-items:center; justify-content:center; font-size:24px; margin:0 auto 20px; }
-        .success-title { font-family:'Cormorant Garamond',serif; font-size:26px; color:#F0EDE8; margin-bottom:8px; }
-        .success-body { font-size:13px; color:#5C5955; line-height:1.7; }
-        .success-body strong { color:#C9A84C; }
+        .success-icon { width:68px; height:68px; border-radius:50%; background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.25); display:flex; align-items:center; justify-content:center; font-size:28px; margin:0 auto 24px; animation:popIn 0.4s cubic-bezier(0.16,1,0.3,1); }
+        @keyframes popIn { from{transform:scale(0.6);opacity:0} to{transform:scale(1);opacity:1} }
+        .success-title { font-family:'Cormorant Garamond',serif; font-size:28px; color:#F0EDE8; margin-bottom:10px; }
+        .success-title em { color:#C9A84C; font-style:italic; }
+        .success-body { font-size:13px; color:#5C5955; line-height:1.75; margin-bottom:24px; }
+        .success-body strong { color:#F0EDE8; }
+        .success-email-badge { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; background:#181716; border:1px solid #312F2D; border-radius:8px; font-size:13px; color:#C9A84C; font-weight:500; margin-bottom:24px; word-break:break-all; }
+        .success-steps { display:flex; flex-direction:column; gap:10px; text-align:left; margin-bottom:28px; }
+        .success-step { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:#181716; border:1px solid #272523; border-radius:8px; }
+        .success-step-num { width:22px; height:22px; border-radius:50%; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.25); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:#C9A84C; flex-shrink:0; margin-top:1px; }
+        .success-step-text { font-size:12px; color:#9B9690; line-height:1.55; }
+        .success-step-text strong { color:#F0EDE8; font-weight:500; }
+        .success-spam { font-size:11px; color:#5C5955; line-height:1.6; padding:12px 14px; background:#111010; border:1px solid #272523; border-radius:8px; }
+        .success-spam a { color:#C9A84C; text-decoration:none; cursor:pointer; }
+        .success-spam a:hover { text-decoration:underline; }
+
         ::-webkit-scrollbar { width:5px; }
         ::-webkit-scrollbar-thumb { background:#272523; border-radius:99px; }
       `}</style>
@@ -186,17 +201,51 @@ export default function SignupPage() {
             <div className="logo-tagline">personal care, elevated</div>
           </div>
 
-          <div className="trial-badge">
-            <span style={{fontSize:'14px'}}>✦</span>
-            <span className="trial-badge-text"><strong>30 days free</strong> — no credit card required</span>
-          </div>
+          {!success && (
+            <div className="trial-badge">
+              <span style={{fontSize:'14px'}}>✦</span>
+              <span className="trial-badge-text"><strong>30 days free</strong> — no credit card required</span>
+            </div>
+          )}
 
           <div className="form-box">
             {success ? (
+              /* ── CHECK YOUR EMAIL SCREEN ── */
               <div className="success-wrap">
-                <div className="success-icon">✓</div>
-                <div className="success-title">You're all set.</div>
-                <div className="success-body">Welcome to BookedOut — your 30-day free trial has started.<br/><br/>Redirecting you to your <strong>dashboard</strong>…</div>
+                <div className="success-icon">✉</div>
+                <div className="success-title">Check your <em>email</em></div>
+                <div className="success-body">
+                  We sent a confirmation link to:
+                </div>
+                <div className="success-email-badge">
+                  <span>📧</span>
+                  <span>{form.email}</span>
+                </div>
+
+                <div className="success-steps">
+                  <div className="success-step">
+                    <div className="success-step-num">1</div>
+                    <div className="success-step-text">
+                      <strong>Open the email</strong> from BookedOut in your inbox
+                    </div>
+                  </div>
+                  <div className="success-step">
+                    <div className="success-step-num">2</div>
+                    <div className="success-step-text">
+                      <strong>Click "Confirm your account"</strong> in the email
+                    </div>
+                  </div>
+                  <div className="success-step">
+                    <div className="success-step-num">3</div>
+                    <div className="success-step-text">
+                      You'll be taken directly to your <strong>account setup</strong> — it only takes a couple minutes
+                    </div>
+                  </div>
+                </div>
+
+                <div className="success-spam">
+                  Don't see the email? Check your <strong>spam or junk folder</strong>. Still nothing? <a onClick={() => { setSuccess(false); setError('') }}>Go back</a> and try again or use a different email address.
+                </div>
               </div>
             ) : (
               <>
@@ -344,9 +393,11 @@ export default function SignupPage() {
             )}
           </div>
 
-          <div className="form-footer">
-            Already have an account? <a href="/login">Log in →</a>
-          </div>
+          {!success && (
+            <div className="form-footer">
+              Already have an account? <a href="/login">Log in →</a>
+            </div>
+          )}
 
         </div>
       </div>
